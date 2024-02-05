@@ -1,1 +1,8 @@
 Inspired by https://www.youtube.com/watch?v=FntV9iEJ0tU&ab_channel=RobotBobby assets by https://planetpixelemporium.com/
+
+Run with
+
+```
+yarn
+npx vite
+```
