@@ -1,11 +1,15 @@
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import '../css/style.css'
+import getStarField from './getStarfield'
 
 const canvas = document.querySelector('canvas.webgl')
 
 const textureLoader = new THREE.TextureLoader()
-//const normalTexture = textureLoader.load('/assets/textures/NormalMap.png')
+const earthMap = textureLoader.load('/assets/textures/earthmap1k.jpg')
+const lightsMap = textureLoader.load('/assets/textures/03_earthlights1k.jpg')
+const cloudsMap = textureLoader.load('/assets/textures/05_earthcloudmaptrans.jpg')
+const heightsMap = textureLoader.load('/assets/textures/01_earthbump1k.jpg')
 
 const clock = new THREE.Clock();
 const sizes = {
@@ -24,26 +28,10 @@ const createRenderer = () => {
   return renderer
 }
 
-const createSphere = () => {
-  const geometry = new THREE.SphereGeometry(1, 64, 64 );
-  const material = new THREE.MeshStandardMaterial()
-  material.metalness = 0.7
-  material.roughness = 0.5
-  material.color = new THREE.Color(0x222222)
-
-  return new THREE.Mesh(geometry,material)
-}
-
 const createLights = () => {
-  const redLight = new THREE.PointLight(0xff2222, 2)
-  redLight.position.set(-2,1,0)
-
-  const blueLight = new THREE.PointLight( 0x1111ff, 2)
-  blueLight.position.set(2,1,0)
-
-  const whiteLight = new THREE.AmbientLight(0xffffff,0.5)
-
-  return {blueLight, redLight, whiteLight}
+  const whiteLight = new THREE.DirectionalLight(0xffffff,3)
+  whiteLight.position.set(-4,1,3)
+  return {whiteLight}
 }
 
 const createCamera = () => {
@@ -55,26 +43,78 @@ const createCamera = () => {
   return camera
 }
 
+const createSphere = (celestialBody) => {
+  const geometry = new THREE.IcosahedronGeometry(1, 6 );
+  let material = new THREE.MeshStandardMaterial()
+  const celestialBodyGroup = new THREE.Group
+
+  if(celestialBody == "earth"){
+     material.map = earthMap
+
+     const lightMaterial = new THREE.MeshStandardMaterial({
+       map: lightsMap,
+       blending:THREE.MultiplyBlending,
+       opacity: 1
+     })
+     const earthLights = new THREE.Mesh(geometry, lightMaterial)
+     celestialBodyGroup.add(earthLights)
+
+     const cloudsMaterial = new THREE.MeshStandardMaterial({
+       map: cloudsMap,
+       blending:THREE.AdditiveBlending,
+       opacity: 0.1
+     })
+     const clouds = new THREE.Mesh(geometry, cloudsMaterial)
+     celestialBodyGroup.add(clouds)
+
+     const heightsMaterial = new THREE.MeshStandardMaterial({
+       map: heightsMap,
+       blending:THREE.AdditiveBlending,
+       opacity: 0.2
+     })
+     const heights = new THREE.Mesh(geometry, heightsMaterial)
+     celestialBodyGroup.add(heights)
+  }
+
+  if(celestialBody =="sun"){
+    material = new THREE.MeshBasicMaterial()
+  }
+
+  celestialBodyGroup.add(new THREE.Mesh(geometry,material))
+  return celestialBodyGroup
+}
+
 const scene = new THREE.Scene()
 const renderer = createRenderer()
 
-const sphere = createSphere()
-scene.add(sphere)
-
-const {blueLight, redLight, whiteLight} = createLights()
-scene.add(redLight, blueLight, whiteLight)
+const { whiteLight} = createLights()
+scene.add( whiteLight)
 
 const camera = createCamera()
 scene.add(camera)
 
+new OrbitControls(camera, renderer.domElement)
+
+const sphere = createSphere("earth")
+const earthGroup = new THREE.Group()
+earthGroup.add(sphere)
+earthGroup.rotation.z = -23.4*Math.PI / 180
+scene.add(earthGroup)
+
+const stars = getStarField()
+scene.add(stars)
+
+const sun = createSphere("sun")
+sun.position.set(-4,1,3)
+scene.add(sun)
+
 function update() {
   const elapsedTime = clock.getElapsedTime()
- 	sphere.rotation.x = .01 * elapsedTime
+ 	sphere.rotation.y = .2 * elapsedTime
 
   renderer.render(scene, camera)
 
 	requestAnimationFrame( update );
-
 }
 
 update();
